@@ -1,81 +1,134 @@
-package com.volkangurbuz.codechallenge.Adapter;
+package com.volkangurbuz.codechallenge;
 
-import android.support.annotation.NonNull;
+import android.app.ProgressDialog;
+import android.support.v4.widget.SwipeRefreshLayout;
+import android.support.v7.app.AppCompatActivity;
+import android.os.Bundle;
+import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.TextView;
+import android.util.Log;
+import android.widget.Button;
+import android.widget.EditText;
 
-import com.volkangurbuz.codechallenge.Model.Repo;
-import com.volkangurbuz.codechallenge.Model.RepoDetails;
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonParser;
+import com.volkangurbuz.codechallenge.Adapter.TrendAdapter;
 import com.volkangurbuz.codechallenge.Model.Trend;
-import com.volkangurbuz.codechallenge.R;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
-public class TrendAdapter extends RecyclerView.Adapter<TrendAdapter.ContactViewHolder> {
+public class MainActivity extends AppCompatActivity {
 
 
+    private ProgressDialog pd;
+    private RecyclerView recList;
+    private TrendAdapter trendAdapter;
     private List<Trend> trendList;
-    private List<Repo> repoList;
+    private SwipeRefreshLayout swipeRefreshLayout;
+    private EditText filterET;
+    private Button button;
 
-    public TrendAdapter(List<Trend> trendList, List<Repo> repoList) {
-        this.trendList = trendList;
-        this.repoList = repoList;
-    }
+    private int sumOfStars, sumOfWatchers;
 
-    public TrendAdapter(List<Trend> trendList) {
-        this.trendList = trendList;
-    }
 
-    @NonNull
-    @Override
-    public ContactViewHolder onCreateViewHolder(@NonNull ViewGroup viewGroup, int i) {
-        View itemView = LayoutInflater.
-                from(viewGroup.getContext()).
-                inflate(R.layout.trend_list_row, viewGroup, false);
-
-        return new ContactViewHolder(itemView);
-    }
 
     @Override
-    public void onBindViewHolder(@NonNull ContactViewHolder contactViewHolder, int i) {
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
 
-        Trend t =  trendList.get(i);
-        Repo r = repoList.get(i);
+        pd = new ProgressDialog(this, ProgressDialog.STYLE_SPINNER);
+        pd.setMessage("Logging in, please wait to show the trends.");
+        pd.show();
 
-        contactViewHolder.name.setText(t.getName());
-        contactViewHolder.nameDetail.setText(t.getNameDetail());
-        contactViewHolder.url.setText(t.getUrl());
-        contactViewHolder.star.setText(r.getStar()+"");
-        contactViewHolder.watcher.setText(r.getWatcher()+"");
+        filterET = findViewById(R.id.showJobsET);
+        button = findViewById(R.id.filterBtn);
+
+
+        swipeRefreshLayout = findViewById(R.id.swipeRefleshLayout);
+        recList = findViewById(R.id.recView);
+        recList.setHasFixedSize(true);
+        LinearLayoutManager llm = new LinearLayoutManager(this);
+        llm.setOrientation(LinearLayoutManager.VERTICAL);
+        recList.setLayoutManager(llm);
+
+        getTrends();
+
+        trendAdapter = new TrendAdapter(trendList);
+
+        recList.setAdapter(trendAdapter);
+
+        // trendList.clear();
+
 
     }
 
-    @Override
-    public int getItemCount() {
-        return trendList.size();
+
+    private void getTrends(date d) {
+
+        trendList = new ArrayList<>();
+        final Gson gson = new Gson();
+        String url = "https://github-trending-api.now.sh/repositories?since="+ d.toString();
+
+        RequestQueue requestQueue = Volley.newRequestQueue(MainActivity.this);
+
+        StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        pd.dismiss();
+                        swipeRefreshLayout.setRefreshing(false);
+                        JsonArray jsonArray = new JsonParser().parse(response).getAsJsonArray();
+
+                        Log.d("jsonsize", jsonArray.size()+"");
+
+                        for (int i = 0; i < jsonArray.size(); i++) {
+
+                            Trend trendModel = gson.fromJson(jsonArray.get(i), Trend.class);
+
+                            sumOfStars += trendModel.getStars();
+                            sumOfWatchers +=trendModel.getForks();
+                            trendList.add(trendModel);
+
+                           // for (Trend t: trendModel) {
+                           //     Log.d("star", t.getStars()+"");
+                           // }
+
+                          //  trendList = Arrays.asList(trendModel);
+
+                        }
+                        trendAdapter.notifyDataSetChanged();
+
+                    }
+                }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                Log.e("responseErr", error.getMessage());
+                swipeRefreshLayout.setRefreshing(false);
+                pd.dismiss();
+            }
+        }) {
+
+        };
+        requestQueue.add(stringRequest);
+
     }
 
-    class ContactViewHolder extends RecyclerView.ViewHolder {
-
-        protected TextView name, nameDetail, url, star, watcher;
-
-        public ContactViewHolder(View v){
-            super(v);
-
-            name = v.findViewById(R.id.userName);
-            nameDetail = v.findViewById(R.id.userNameDetail);
-            url = v.findViewById(R.id.url);
-            star = v.findViewById(R.id.star);
-            watcher = v.findViewById(R.id.watcher);
-
-
-        }
+    enum date{
+        weekly,
+        daily,
+        montly
 
     }
-
 
 
 }
