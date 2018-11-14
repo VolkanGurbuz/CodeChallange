@@ -69,7 +69,7 @@ public class MainActivity extends AppCompatActivity {
 
         trendList = new ArrayList<>();
         final Gson gson = new Gson();
-        String url = "https://github-trending-api.now.sh/developers?language=java";
+        String url = "https://github-trending-api.now.sh/repositories?since=weekly";
 
         RequestQueue requestQueue = Volley.newRequestQueue(MainActivity.this);
 
@@ -107,43 +107,7 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    RequestQueue requestQueue;
 
-    private void getRepos(String userName, String repo) {
-
-        repoList = new ArrayList<>();
-        final Gson gson = new Gson();
-        String url = "https://api.github.com/repos/" + userName + "/" + repo;
-
-        requestQueue = Volley.newRequestQueue(MainActivity.this);
-
-        StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
-                new Response.Listener<String>() {
-                    @Override
-                    public void onResponse(String response) {
-
-
-                        JsonArray jsonArray = new JsonParser().parse(response).getAsJsonArray();
-
-                        for (int i = 0; i < jsonArray.size(); i++) {
-                            Repo repoModel = gson.fromJson(jsonArray.get(i), Repo.class);
-
-                            repoList.add(repoModel);
-                        }
-                        trendAdapter.notifyDataSetChanged();
-                    }
-                }, new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-                Log.e("responseErr", error.getMessage());
-                swipeRefreshLayout.setRefreshing(false);
-                pd.dismiss();
-            }
-        }) {
-
-        };
-        requestQueue.add(stringRequest);
-    }
 
 
 }
